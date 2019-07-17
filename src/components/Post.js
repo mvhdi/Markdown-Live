@@ -2,8 +2,9 @@ import React, { Component } from "react";
 import { Link } from "react-router-dom";
 import db from "./firebaseConfig";
 import ReactMarkdown from "react-markdown";
+import { Button} from 'react-bootstrap';
 
-var displayVal = "false";
+var displayVal = false;
 
 class Post extends Component {
   constructor(props) {
@@ -12,27 +13,32 @@ class Post extends Component {
     this.titleRef = React.createRef();
     this.bodyRef = React.createRef();
     this.postFBRef = db.ref(`posts/${this.props.match.params.postId}`);
+
     this.state = {
       mdBody: ""
     };
   }
 
   componentDidMount() {
-    this.postFBRef.on("value", snapshot => {
-      if (snapshot.exists()) {
-        displayVal = "true";
-        console.log(displayVal);
-      } else {
-        displayVal = "false";
-        return;
-      }
-      if (!snapshot.val()) return;
-      this.titleRef.current &&
-        (this.titleRef.current.value = snapshot.val().title);
-      this.bodyRef.current &&
-        (this.bodyRef.current.value = snapshot.val().body);
-      this.setState({
-        mdBody: snapshot.val().body
+    db.ref("/posts").on("value", snapshot => {
+      snapshot.forEach(childSnapshot => {
+        var x = this.props.match.params.postId;
+        var y = childSnapshot.val().token + "-" + childSnapshot.val().code;
+        if (x === y) {
+          // console.log("true");
+          displayVal = true;
+          this.postFBRef.on("value", snapshot => {
+            this.titleRef.current &&
+              (this.titleRef.current.value = snapshot.val().title);
+            this.bodyRef.current &&
+              (this.bodyRef.current.value = snapshot.val().body);
+            this.setState({
+              mdBody: snapshot.val().body
+            });
+          });
+        } else {
+          // console.log("false");
+        }
       });
     });
   }
@@ -48,14 +54,17 @@ class Post extends Component {
   };
 
   render() {
-    if (displayVal === "true") {
+    if (displayVal) {
       return (
+// ----------------------------
         <React.Fragment>
           <div className="row">
-            <div className="col col-sm-12">
-              <Link to="/">Home</Link>
+            <div className="col-md-4 mb-3 mt-3">
+              <Button  variant="outline-primary" href="/">Home </Button>
             </div>
-            <div className="col col-sm-12">
+            </div>
+            <div className="row">
+            <div className="col-md-4 mb-3">
               <input
                 className="post-title-input"
                 ref={this.titleRef}
@@ -82,11 +91,18 @@ class Post extends Component {
                 className="markdown-preview"
               />
             </div>
-          </div>
+         </div> 
         </React.Fragment>
       );
     } else {
-      return null;
+      return (
+        <React.Fragment>
+          <div className="col-md-4 mb-3 mt-3">
+              <Button  variant="outline-primary" href="/">Home </Button>
+            </div>
+          <h1> Wrong passcode </h1>
+        </React.Fragment>
+      );
     }
   }
 }
